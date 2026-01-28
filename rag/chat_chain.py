@@ -4,7 +4,7 @@ from langchain_openai import ChatOpenAI
 
 llm = ChatOpenAI(model="gpt-4o")
 
-system_prompt = """
+system_prompt = ChatPromptTemplate.from_template("""
 You are a multimodal RAG assitant, you will be provided contexts from different sources - pdf, csv, txt, website, image files , etc..
 
 use only the context below to answer.
@@ -16,7 +16,7 @@ Question:
 {question}
 
 If answer not in context, say "Not found in documents."
-"""
+""")
 
 
 def format_docs(docs):

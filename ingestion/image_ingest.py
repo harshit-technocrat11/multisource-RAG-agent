@@ -2,15 +2,36 @@ import io, base64
 from PIL import Image
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
-from ingestion.image_utilities import image_to_base64
 
 vision_llm = ChatOpenAI(model="gpt-4o")
 
-def ingest_image(file):
+# normalize --> allowing any type of img file   .png .jpg, .webp ...
+def normalize_image(image_bytes_or_file):
+    """
+    Accepts:
+    - raw bytes (from PDF)
+    - file-like object (upload)
 
-    pil_image = Image.open(file).convert("RGB")
+    Returns:
+    - base64 PNG string
+    """
 
-    img_base64 = image_to_base64(pil_image)
+    if isinstance(image_bytes_or_file, bytes):
+        pil_image = Image.open(io.BytesIO(image_bytes_or_file))
+    else:
+        pil_image = Image.open(image_bytes_or_file)
+
+    pil_image = pil_image.convert("RGB")
+
+    buffer = io.BytesIO()
+    pil_image.save(buffer, format="PNG")
+
+    return base64.b64encode(buffer.getvalue()).decode()
+
+
+def ingest_image(image_input, source="uploaded_image"):
+
+    img_base64 = normalize_image(image_input)
 
     response = vision_llm.invoke([
         {
@@ -32,6 +53,9 @@ def ingest_image(file):
     return [
         Document(
             page_content=caption,
-            metadata={"type": "image", "source": "uploaded_image"}
+            metadata={
+                "type": "image",
+                "source": source
+            }
         )
     ]
