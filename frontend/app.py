@@ -22,7 +22,7 @@ from ingestion.docx_ingest import ingest_docx
 
 from rag.vectordb_embeddings import create_vectorstore
 from rag.retriever import get_retriever
-from rag.chat_chain import answer_question
+from rag.chat_chain import answer_question_stream
 
 
 # -------------------------
@@ -204,12 +204,24 @@ if ask_btn and user_query:
     else:
         with st.spinner("Thinking..."):
 
-            answer, sources = answer_question(
+            stream, sources = answer_question_stream(
                 st.session_state.retriever,
                 user_query
             )
 
-        # clean source formatting
+        # Create placeholder for streaming text
+        bot_placeholder = st.empty()
+        streamed_text = ""
+
+        for chunk in stream:
+            if chunk.content:
+                streamed_text += chunk.content
+                bot_placeholder.markdown(
+                    f'<div class="bot-bubble">{streamed_text}</div>',
+                    unsafe_allow_html=True
+                )
+
+        # Format sources cleanly
         unique_sources = {}
 
         for s in sources:
@@ -226,7 +238,7 @@ if ask_btn and user_query:
             for src, locs in unique_sources.items()
         )
 
-        final_answer = f"{answer}\n\n📌 Sources:\n{source_text}"
+        final_answer = f"{streamed_text}\n\n📌 Sources:\n{source_text}"
 
         st.session_state.chat_history.append({
             "user": user_query,
@@ -234,3 +246,4 @@ if ask_btn and user_query:
         })
 
         st.rerun()
+
