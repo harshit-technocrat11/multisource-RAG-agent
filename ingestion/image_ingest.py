@@ -2,6 +2,7 @@ import io, base64
 from PIL import Image
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
+from ingestion.chunker import chunk_docs
 
 vision_llm = ChatOpenAI(model="gpt-4o")
 
@@ -50,7 +51,7 @@ def ingest_image(image_input, source="uploaded_image"):
 
     caption = response.content
 
-    return [
+    docs = [
         Document(
             page_content=caption,
             metadata={
@@ -59,3 +60,6 @@ def ingest_image(image_input, source="uploaded_image"):
             }
         )
     ]
+
+    docs = chunk_docs(docs)
+    return docs

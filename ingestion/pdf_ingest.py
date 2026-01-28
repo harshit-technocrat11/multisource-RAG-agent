@@ -9,6 +9,8 @@ from ingestion.image_ingest import ingest_image
 # from ingestion.image_utilities import image_to_base64
 import base64, io 
 vision_llm = ChatOpenAI(model="gpt-4o")
+from ingestion.chunker import chunk_docs
+
 
 splitter = RecursiveCharacterTextSplitter(
     chunk_size=1500,
@@ -29,7 +31,7 @@ def ingest_pdf(path):
                 page_content=text,
                 metadata={"page": i, "type": "text", "source": path}
             )
-            chunks = splitter.split_documents([base_doc])
+            chunks = chunk_docs([base_doc])
             all_docs.extend(chunks)
 
         # IMAGES
@@ -43,8 +45,8 @@ def ingest_pdf(path):
             source=path
             )
 
+    docs_from_image = chunk_docs(docs_from_image)
     all_docs.extend(docs_from_image)
-
 
     doc.close()
 

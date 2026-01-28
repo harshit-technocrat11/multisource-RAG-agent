@@ -1,5 +1,6 @@
 import pandas as pd
 from langchain_core.documents import Document
+from ingestion.chunker import chunk_docs
 
 def ingest_csv(path):
     df = pd.read_csv(path)
@@ -19,4 +20,6 @@ def ingest_csv(path):
                 }
             )
         )
-    return rows
+    docs = chunk_docs(rows)
+
+    return docs
