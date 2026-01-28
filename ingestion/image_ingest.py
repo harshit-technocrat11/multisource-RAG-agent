@@ -1,9 +1,12 @@
+import os
+from dotenv import load_dotenv
 import io, base64
 from PIL import Image
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
 from ingestion.chunker import chunk_docs
 
+load_dotenv()
 vision_llm = ChatOpenAI(model="gpt-4o")
 
 # normalize --> allowing any type of img file   .png .jpg, .webp ...

@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 import fitz
 import io
 from PIL import Image
@@ -8,6 +10,10 @@ from ingestion.image_ingest import ingest_image
 # import image base64 helper
 # from ingestion.image_utilities import image_to_base64
 import base64, io 
+import tempfile
+
+load_dotenv()
+OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
 vision_llm = ChatOpenAI(model="gpt-4o")
 from ingestion.chunker import chunk_docs
 
@@ -17,14 +23,24 @@ splitter = RecursiveCharacterTextSplitter(
     chunk_overlap=100
 )
 
-def ingest_pdf(path):
+def ingest_pdf(file):
+
+    if hasattr(file, "read"):
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            tmp.write(file.read())
+            path = tmp.name
+
+    else:
+        path = file  # normal path for CLI use
 
     doc = fitz.open(path)
-    all_docs =[]
+    all_docs=[]
 
     for i, page in enumerate(doc):
         
         # TEXT
+    
         text = page.get_text()
         if text.strip():
             base_doc = Document(
