@@ -13,6 +13,7 @@ from ui.inputbox import render_input
 from handlers.ingestion_handler import handle_ingestion
 from handlers.chat_handler import handle_chat_stream, fetch_sources
 
+from voice.tts import speak
 
 
 
@@ -56,9 +57,8 @@ render_chat(st.session_state.chat_history)
 
 
 # Input
-
-
 user_query, ask_btn = render_input()
+use_voice = st.checkbox("🔊 Voice response")
 
 
 # Chat logic
@@ -88,5 +88,7 @@ if ask_btn and user_query:
         "user": user_query,
         "bot": final_output
     })
+    if use_voice:
+        speak(streamed_text)
 
     st.rerun()
