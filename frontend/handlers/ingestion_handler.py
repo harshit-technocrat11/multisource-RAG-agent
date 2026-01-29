@@ -1,34 +1,24 @@
-from ingestion.pdf_ingest import ingest_pdf
-from ingestion.image_ingest import ingest_image
-from ingestion.web_ingest import ingest_web
-from ingestion.txt_ingest import ingest_txt
-from ingestion.csv_ingest import ingest_csv
-from ingestion.docx_ingest import ingest_docx
+import requests
+
+BACKEND_URL = "http://localhost:8000"
 
 def handle_ingestion(uploaded_files, url):
 
-    all_docs = []
+    files_payload = []
 
     for file in uploaded_files:
+        files_payload.append(
+            ("files", (file.name, file.getvalue()))
+        )
 
-        name = file.name.lower()
-
-        if name.endswith(".pdf"):
-            all_docs += ingest_pdf(file)
-
-        elif name.endswith((".png",".jpg",".jpeg",".webp")):
-            all_docs += ingest_image(file)
-
-        elif name.endswith(".txt"):
-            all_docs += ingest_txt(file)
-
-        elif name.endswith(".csv"):
-            all_docs += ingest_csv(file)
-
-        elif name.endswith(".docx"):
-            all_docs += ingest_docx(file)
-
+    data = {}
     if url:
-        all_docs += ingest_web(url)
+        data["url"] = url
 
-    return all_docs
+    r = requests.post(
+        f"{BACKEND_URL}/ingest",
+        files=files_payload if files_payload else None,
+        data=data
+    )
+
+    return r.json()

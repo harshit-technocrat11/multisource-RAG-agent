@@ -5,104 +5,88 @@ import streamlit as st
 from dotenv import load_dotenv
 load_dotenv()
 
-from rag.persistence import load_vectorstore
-from rag.vectordb_embeddings import create_vectorstore
-from rag.retriever import get_retriever
-
 from ui.layout import setup_page, render_title
 from ui.sidebar import render_sidebar
 from ui.chat_interface import render_chat
 from ui.inputbox import render_input
 
 from handlers.ingestion_handler import handle_ingestion
-from handlers.chat_handler import handle_chat
+from handlers.chat_handler import handle_chat_stream, fetch_sources
 
 
-# --------------------
+
+
 # Setup UI
-# --------------------
+
 
 setup_page()
 render_title()
 
 
-# --------------------
-# Load DB if exists
-# --------------------
 
-if "retriever" not in st.session_state:
-
-    existing_db = load_vectorstore()
-
-    if existing_db:
-        st.session_state.retriever = get_retriever(existing_db)
-    else:
-        st.session_state.retriever = None
-
+# Session state
 
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
 
-# --------------------
 # Sidebar
-# --------------------
 
 uploaded_files, url, ingest_btn = render_sidebar()
 
 
-# --------------------
 # Ingestion
-# --------------------
+
 
 if ingest_btn:
 
     with st.spinner("Ingesting data..."):
 
-        docs = handle_ingestion(uploaded_files, url)
+        res = handle_ingestion(uploaded_files, url)
 
-        if docs:
-            vectorstore = create_vectorstore(docs)
-            st.session_state.retriever = get_retriever(vectorstore)
-            st.success("✅ Data ingested!")
+        if res.get("status") == "success":
+            st.success("✅ Data ingested into backend!")
         else:
-            st.warning("No data provided")
+            st.warning("⚠️ No data provided")
 
 
-# --------------------
+
 # Chat interface
-# --------------------
-
 render_chat(st.session_state.chat_history)
 
 
-# --------------------
 # Input
-# --------------------
+
 
 user_query, ask_btn = render_input()
 
 
-# --------------------
 # Chat logic
-# --------------------
-
 if ask_btn and user_query:
 
-    if not st.session_state.retriever:
-        st.warning("Please ingest data first!")
+    bot_placeholder = st.empty()
+    streamed_text = ""
 
-    else:
-        with st.spinner("Thinking..."):
+    for token in handle_chat_stream(user_query):
+        streamed_text += token
+        formatted_text = streamed_text.replace("\n", "<br>")
+        bot_placeholder.markdown(
+            f'<div class="bot-bubble">{streamed_text}</div>',
+            unsafe_allow_html=True
+        )
 
-            answer = handle_chat(
-                st.session_state.retriever,
-                user_query
-            )
+    sources = fetch_sources(user_query)
 
-        st.session_state.chat_history.append({
-            "user": user_query,
-            "bot": answer
-        })
+    ref_text = "<br><br><b>📌 Sources:</b><br>"
 
-        st.rerun()
+    for s in sources:
+        ref_text += f"• {s['source']} — {s['type']}, page- {s['page']}<br>"
+
+    final_output = formatted_text + ref_text
+
+    st.session_state.chat_history.append({
+        "user": user_query,
+        "bot": final_output
+    })
+
+    st.rerun()
